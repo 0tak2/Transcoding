@@ -1,6 +1,6 @@
 import Foundation
 
 public struct AnnexBPayload: Sendable, Codable {
-    let annexBData: Data
-    let presentationTimestamp: TimeInterval
+    public let annexBData: Data
+    public let presentationTimestamp: TimeInterval
 }
