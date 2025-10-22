@@ -63,7 +63,7 @@ public final class VideoDecoderAnnexBAdaptor {
                         Self.logger.error("Failed to create format description with error: \(error, privacy: .public)")
                     }
                 }
-                decodeAVCCFrame(nalu.avcc, pts: (pts ?? Date().timeIntervalSince1970).cmTime)
+                decodeAVCCFrame(nalu.avcc, pts: pts?.cmTime)
             }
         }
     }
@@ -86,7 +86,7 @@ public final class VideoDecoderAnnexBAdaptor {
                         Self.logger.error("Failed to create format description with error: \(error, privacy: .public)")
                     }
                 }
-                decodeAVCCFrame(nalu.avcc, pts: (pts ?? Date().timeIntervalSince1970).cmTime)
+                decodeAVCCFrame(nalu.avcc, pts: pts?.cmTime)
             }
         }
     }
