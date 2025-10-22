@@ -26,7 +26,7 @@ public final class VideoDecoderAnnexBAdaptor {
         }
     }
 
-    public func decode(_ payload: AnnexBPayload, ) {
+    public func decode(_ payload: AnnexBPayload) {
         switch codec {
         case .h264:
             decodeH264(payload.annexBData, pts: payload.presentationTimestamp)
