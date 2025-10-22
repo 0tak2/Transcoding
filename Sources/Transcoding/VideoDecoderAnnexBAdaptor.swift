@@ -100,7 +100,7 @@ public final class VideoDecoderAnnexBAdaptor {
         let timingInfo = CMSampleTimingInfo(
             duration: .invalid,
             presentationTimeStamp: pts ?? .invalid,
-            decodeTimeStamp: Date().timeIntervalSince1970.cmTime
+            decodeTimeStamp: pts ?? .invalid
         )
 
         var data = data
