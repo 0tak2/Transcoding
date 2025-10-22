@@ -3,6 +3,8 @@ import Foundation
 import OSLog
 
 public final class VideoEncoderAnnexBAdaptor {
+    private var firstReceivedTimeInHostTime: CMTime?
+
     // MARK: Lifecycle
 
     public init(videoEncoder: VideoEncoder) {
@@ -90,8 +92,22 @@ public final class VideoEncoderAnnexBAdaptor {
                 // Get PTS from buffer
                 let pts = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
 
+                if firstReceivedTimeInHostTime == nil {
+                    firstReceivedTimeInHostTime = pts
+                }
+
                 for continuation in continuations.values {
-                    continuation.yield(.init(annexBData: elementaryStream, presentationTimestamp: CMTimeGetSeconds(pts)))
+                    if let firstReceivedTimeInHostTime {
+                        continuation.yield(
+                            .init(
+                                annexBData: elementaryStream, 
+                                firstFrameTimestamp: CMTimeGetSeconds(firstReceivedTimeInHostTime), 
+                                presentationTimestamp: CMTimeGetSeconds(pts)
+                            )
+                        )
+                    } else {
+                        Self.logger.error("firstReceivedTimeInHostTime is not set")
+                    }
                 }
             }
         }
