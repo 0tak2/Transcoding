@@ -87,8 +87,11 @@ public final class VideoEncoderAnnexBAdaptor {
                     offset += Int(naluLength.bigEndian)
                 }
 
+                // Get PTS from buffer
+                let pts = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+
                 for continuation in continuations.values {
-                    continuation.yield(elementaryStream)
+                    continuation.yield(.init(annexBData: elementaryStream, presentationTimestamp: CMTimeGetSeconds(pts)))
                 }
             }
         }
@@ -96,7 +99,7 @@ public final class VideoEncoderAnnexBAdaptor {
 
     // MARK: Public
 
-    public var annexBData: AsyncStream<Data> {
+    public var annexBData: AsyncStream<AnnexBPayload> {
         .init { continuation in
             let id = UUID()
             continuations[id] = continuation
@@ -113,5 +116,5 @@ public final class VideoEncoderAnnexBAdaptor {
     let videoEncoder: VideoEncoder
     var conversionTask: Task<Void, Never>?
 
-    var continuations: [UUID: AsyncStream<Data>.Continuation] = [:]
+    var continuations: [UUID: AsyncStream<AnnexBPayload>.Continuation] = [:]
 }
