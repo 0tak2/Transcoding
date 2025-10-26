@@ -7,6 +7,12 @@ A simple Swift package for video encoding and decoding with Annex-B adaptors opt
 
 <img width="2802" alt="Example data flow" src="https://github.com/finnvoor/Transcoding/assets/8284016/3c0cb0dc-ebaf-4419-b43c-d47553ca9f06">
 
+## 왜 포크했나?
+
+- 이 레포는 finnvoor가 CC0 라이센스로 공개한 간단한 트랜스코딩 라이브러리인 [Transcoding](https://github.com/finnvoor/Transcoding) 레포의 포크입니다.
+- W-Fi Aware를 이용해 카메라 프리뷰를 스트리밍하는 프로젝트 [codename. QueenCam](https://github.com/DeveloperAcademy-POSTECH/2025-C6-A11-QueendomJaerim)을 진행하면서 AVFoundation의 AVSampleBufferDisplayLayer를 통해 디코딩한 CMSampleBuffer를 렌더링하고자 했으나, 각 프레임별 PTS(Presentation TimeStamp)가 CMSampleBuffer에 포함되지 않아 제대로 재생되지 않았습니다.
+- 이 포크는 인코딩 시점에 CMClock을 이용해 디바이스의 Host Time을 기준으로 한 PTS를 함께 반환합니다. 이 PTS를 네트워크 레이어에서 NALU와 함께 전송한 뒤, 디코딩 시점에 NALU와 함께 전달받은 PTS를 넘기면 디코딩된 버퍼에 timingInfo를 지정해서 반환합니다.
+
 ## Usage
 ### VideoEncoder
 `VideoEncoder` is an object that takes `CMSampleBuffer`s containing `CVPixelBuffer`s and outputs a stream of `CMSampleBuffer`s containing `CMBlockBuffer`s containing compressed H264/HEVC data. `VideoEncoder` is initialized with a `Config`, with presets for live capture, active transcoding, background transcoding, and ultra-low latency following Apple's recommendations.
