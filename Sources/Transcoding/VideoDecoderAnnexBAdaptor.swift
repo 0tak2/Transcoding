@@ -134,20 +134,15 @@ public final class VideoDecoderAnnexBAdaptor {
         }
     }
   
-    private func logDiff(senderHostTime: TimeInterval, senderPTS: TimeInterval, receiverHostTime: TimeInterval, receiverPTS: TimeInterval) {
-        let hostTimeDiff = receiverHostTime - senderHostTime
-        let ptsDiff = receiverPTS - senderPTS
+    private func logDiff(receiverHostTime: TimeInterval, receiverPTS: TimeInterval) {
         let latency = receiverHostTime - receiverPTS
         
         Self.logger.debug(
           """
-          [FrameLog] SenderHostTime: \(String(format: "%.3f", senderHostTime), privacy: .public), \n\
-          SenderPTS: \(String(format: "%.3f", senderPTS), privacy: .public), \n\
-          ReceiverHostTime (Mine): \(String(format: "%.3f", receiverHostTime), privacy: .public), \n\
-          ReceiverPTS (Mine): \(String(format: "%.3f", receiverPTS), privacy: .public), \n\
-          HostTimeDiff: \(String(format: "%.3f", hostTimeDiff), privacy: .public)s, \n\
-          PTSDiff: \(String(format: "%.3f", ptsDiff), privacy: .public)s, \n\
-          Latency: \(String(format: "%.3f", latency), privacy: .public)s,
+          [FrameLog] \n\
+          My HostTime: \(String(format: "%.3f", receiverHostTime), privacy: .public), \n\
+          My PTS: \(String(format: "%.3f", receiverPTS), privacy: .public), \n\
+          Latency (My HostTime - My PTS): \(String(format: "%.3f", latency), privacy: .public)s,
           """
         )
     }
@@ -160,7 +155,10 @@ public final class VideoDecoderAnnexBAdaptor {
             firstSenderHostTime = payload.firstFrameTimestamp
             firstReceiverHostTime = CMClockGetTime(CMClockGetHostTimeClock())
             
-            logDiff(senderHostTime: payload.firstFrameTimestamp, senderPTS: payload.presentationTimestamp, receiverHostTime: CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock())), receiverPTS: CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock())))
+            logDiff(
+              receiverHostTime: CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock())),
+              receiverPTS: CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()))
+            )
             Self.logger.debug("Decoder synchronized clocks. First Sender TS: \(payload.firstFrameTimestamp)")
             
           // 첫 프레임은 계산된 HostTime (지금)을 반환
@@ -176,9 +174,10 @@ public final class VideoDecoderAnnexBAdaptor {
         // targetHostTime = (Receiver의 첫 시간) + (미디어 시간 경과)
         let targetHostTime = CMTimeAdd(firstReceiverHostTime!, mediaDurationSeconds.cmTime)
       
-        logDiff(senderHostTime: payload.firstFrameTimestamp, senderPTS: payload.presentationTimestamp, receiverHostTime: CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock())), receiverPTS: CMTimeGetSeconds(targetHostTime))
-        
         let now = CMClockGetTime(CMClockGetHostTimeClock())
+      
+        logDiff(receiverHostTime: CMTimeGetSeconds(now), receiverPTS: CMTimeGetSeconds(targetHostTime))
+        
         return min(targetHostTime, now + maxFuture)
     }
 }
