@@ -15,10 +15,12 @@ public final class VideoDecoderAnnexBAdaptor {
 
     public init(
         videoDecoder: VideoDecoder,
-        codec: Codec
+        codec: Codec,
+        maxFuture: CMTime = CMTime(seconds: 0.05, preferredTimescale: 1_000_000_000)
     ) {
         self.videoDecoder = videoDecoder
         self.codec = codec
+        self.maxFuture = maxFuture
     }
 
     // MARK: Public
@@ -54,6 +56,9 @@ public final class VideoDecoderAnnexBAdaptor {
     var vps: Data?
     var sps: Data?
     var pps: Data?
+  
+    /// 변환한 PTS가 미래 시간일 때, 허용 가능한 오차 범위 (기본값 0.05초)
+    let maxFuture: CMTime
 
     func decodeH264(_ data: Data, pts: CMTime? = nil) {
         for nalu in data.split(separator: H264NALU.startCode).map({ H264NALU(data: Data($0)) }) {
@@ -108,7 +113,7 @@ public final class VideoDecoderAnnexBAdaptor {
         let timingInfo = CMSampleTimingInfo(
             duration: .invalid,
             presentationTimeStamp: pts ?? .invalid,
-            decodeTimeStamp: pts ?? .invalid
+            decodeTimeStamp: .invalid
         )
 
         var data = data
@@ -128,6 +133,19 @@ public final class VideoDecoderAnnexBAdaptor {
             }
         }
     }
+  
+    private func logDiff(receiverHostTime: TimeInterval, receiverPTS: TimeInterval) {
+        let latency = receiverHostTime - receiverPTS
+        
+        Self.logger.debug(
+          """
+          [FrameLog] \n\
+          My HostTime: \(String(format: "%.3f", receiverHostTime), privacy: .public), \n\
+          My PTS: \(String(format: "%.3f", receiverPTS), privacy: .public), \n\
+          Latency (My HostTime - My PTS): \(String(format: "%.3f", latency), privacy: .public)s,
+          """
+        )
+    }
 
     /// Payload의 상대 시간을 Receiver의 Host Time으로 변환한다.
     private func convertPayloadToReceiverHostTime(_ payload: AnnexBPayload) -> CMTime {
@@ -137,8 +155,13 @@ public final class VideoDecoderAnnexBAdaptor {
             firstSenderHostTime = payload.firstFrameTimestamp
             firstReceiverHostTime = CMClockGetTime(CMClockGetHostTimeClock())
             
+            logDiff(
+              receiverHostTime: CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock())),
+              receiverPTS: CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()))
+            )
             Self.logger.debug("Decoder synchronized clocks. First Sender TS: \(payload.firstFrameTimestamp)")
-            // 첫 프레임은 계산된 HostTime (지금)을 반환
+            
+          // 첫 프레임은 계산된 HostTime (지금)을 반환
             return firstReceiverHostTime!
         }
         
@@ -150,8 +173,12 @@ public final class VideoDecoderAnnexBAdaptor {
         // (Receiver의 HostTime 기준 PTS 계산)
         // targetHostTime = (Receiver의 첫 시간) + (미디어 시간 경과)
         let targetHostTime = CMTimeAdd(firstReceiverHostTime!, mediaDurationSeconds.cmTime)
+      
+        let now = CMClockGetTime(CMClockGetHostTimeClock())
+      
+        logDiff(receiverHostTime: CMTimeGetSeconds(now), receiverPTS: CMTimeGetSeconds(targetHostTime))
         
-        return targetHostTime
+        return min(targetHostTime, now + maxFuture)
     }
 }
 
